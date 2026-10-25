@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Link Terminal — Physical URL Shortener (LT•01)</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <span class="mark">▥</span> LINK<span>TERMINAL</span>
+    </div>
+
+    <div class="header-controls">
+      <button type="button" id="themeToggleBtn" class="tool-pill" aria-pressed="false" title="Switch page appearance">☾ DARK MODE</button>
+      <button type="button" id="soundToggleBtn" class="tool-pill active" title="Toggle interface sounds">
+        🔊 SOUND ON
+      </button>
+      <div id="liveBadgeBox" class="live">
+        <i></i>
+        <b id="mode">AWS LIVE API MODE</b>
+        <small>VIRTUAL UNIT LT•01</small>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div class="intro-copy">
+        <label>PHYSICAL URL SHORTENER</label>
+        <h1>Short code.<br><em>Direct destination.</em></h1>
+        <p>Enter a short code, resolve its destination, and view the result on the OLED-style display. The same flow is designed for an ESP32 with an AWS-backed API.</p>
+      </div>
+
+      <div class="hw-spec-badges">
+        <div class="spec-chip">
+          <strong>MCU</strong>
+          ESP32-WROOM-32
+        </div>
+        <div class="spec-chip">
+          <strong>DISPLAY</strong>
+          128×64 I2C OLED
+        </div>
+        <div class="spec-chip">
+          <strong>CLOUD STACK</strong>
+          API Gateway · Lambda · DynamoDB
+        </div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <!-- LEFT COLUMN: PHYSICAL ESP32 HARDWARE UNIT (LT•01) -->
+      <div>
+        <div class="heading">
+          <div>
+            <label>DEVICE</label>
+            <h2>Resolver unit</h2>
+          </div>
+          <div class="heading-tags">
+            <span class="tag">GPIO 12 · 14 · 27</span>
+            <span class="tag">ESP32 MODEL</span>
+          </div>
+        </div>
+
+        <div class="device">
+          <div class="device-top">
+            <div class="device-brand">
+              LT<span>•</span>01
+              <span class="mcu-pill">ESP32</span>
+            </div>
+
+            <div class="device-top-right">
+              <!-- OLED Display Color Theme Dots -->
+              <div class="oled-theme-group" title="Switch OLED Display Phosphor Theme">
+                <button type="button" class="theme-dot mint" data-set-oled="mint" aria-label="Mint Backlit LCD"></button>
+                <button type="button" class="theme-dot cyan" data-set-oled="cyan" aria-label="Cyan SSD1306 OLED"></button>
+                <button type="button" class="theme-dot amber" data-set-oled="amber" aria-label="Amber SSD1306 OLED"></button>
+              </div>
+
+              <!-- Status LEDs -->
+              <div class="led-strip">
+                <span class="led-indicator"><i class="led-bulb on-green"></i>PWR</span>
+                <span class="led-indicator"><i id="ledTx" class="led-bulb"></i>TX</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- OLED Screen Frame -->
+          <div class="frame">
+            <div class="screen-top">
+              <span>LINK TERMINAL // I2C 0x3C</span>
+              <div class="screen-top-right">
+                <span id="oledState">READY</span>
+              </div>
+            </div>
+
+            <div class="oled" id="oledScreen">
+              <div>
+                <div class="oled-header-row">
+                  <label id="prompt">ENTER SHORT CODE</label>
+                  <span class="oled-sub-meta" id="pickerModeLabel">CHAR 1/38</span>
+                </div>
+
+                <div class="code-row">
+                  <div class="code" id="codeDisplay">_ _ _ _</div>
+                </div>
+
+                <!-- Interactive Character Wheel / Preset Strip on OLED -->
+                <div class="char-picker-bar" aria-label="OLED Character Selector">
+                  <span>WHEEL:</span>
+                  <div class="picker-Strip" id="pickerStrip">
+                    <!-- Populated by app.js -->
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <hr>
+                <p id="message">SELECT TO BEGIN</p>
+                <div id="oledUrl"></div>
+              </div>
+            </div>
+
+            <div class="screen-bottom">
+              <span>128 × 64 OLED</span>
+              <span id="count">00 / 12</span>
+            </div>
+          </div>
+
+          <!-- 3-Button Physical Controls -->
+          <div class="controls">
+            <div class="control-label">
+              <span>INPUT CONTROLS (3-KEY GPIO)</span>
+              <div class="hw-mode-switch" role="group" aria-label="Hardware Input Mode">
+                <button type="button" id="modeCharBtn" class="hw-mode-btn active">CHAR WHEEL</button>
+                <button type="button" id="modePresetBtn" class="hw-mode-btn">SAVED CODES</button>
+              </div>
+            </div>
+
+            <div class="buttons">
+              <button type="button" id="up">
+                <span class="gpio-pin">G12</span>
+                ↑<small>UP</small>
+              </button>
+              <button type="button" id="down">
+                <span class="gpio-pin">G14</span>
+                ↓<small>DOWN</small>
+              </button>
+              <button type="button" id="select">
+                <span class="gpio-pin">G27</span>
+                ↵<small>SELECT</small>
+              </button>
+            </div>
+
+            <!-- Direct Hardware Action Bar (Resolve from Device or Backspace) -->
+            <div class="device-sub-actions">
+              <button type="button" id="hwBackspaceBtn" class="sub-hw-btn">
+                ⌫ BACKSPACE / DEL
+              </button>
+              <button type="button" id="hwResolveBtn" class="sub-hw-btn primary-send">
+                ⚡ RESOLVE ON CLOUD
+              </button>
+            </div>
+
+            <p id="hint">Press SELECT to begin. UP / DOWN change the highlighted character.</p>
+          </div>
+
+          <div class="device-bottom">
+            BROWSER DEVICE SIMULATOR <span>● 3.3V LOGIC</span>
+          </div>
+        </div>
+
+        <div class="caption">
+          — Browser-based ESP32 hardware unit · Keyboard: ↑ / ↓ / Enter / Backspace / Esc —
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: CLOUD CONTROL & TELEMETRY PANELS -->
+      <aside>
+        <!-- 02 / LOOKUP PANEL -->
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <label>SHORT-CODE LOOKUP</label>
+              <h2>Resolve a link</h2>
+            </div>
+            <span class="circle">↗</span>
+          </div>
+          <p>Enter a short code directly, click a saved demo code below, or use the 3-button hardware unit on the left.</p>
+
+          <form id="form">
+            <label for="shortCode">SHORT CODE</label>
+            <div class="input">
+              <span>/</span>
+              <input id="shortCode" maxlength="12" placeholder="e.g. LAB42" autocomplete="off" required>
+              <button type="button" id="clear" aria-label="Clear">×</button>
+            </div>
+            <button class="resolve" type="submit">
+              <span>Resolve destination</span><b>→</b>
+            </button>
+          </form>
+
+          <div class="demo">
+            <!-- Live deployment: mappings are stored in DynamoDB. The browser does not list all cloud items. -->
+            <!-- Add a mapping directly to the AWS API -->
+            <details class="add-mapping-details">
+              <summary class="add-mapping-summary">+ Add a short code and destination</summary>
+              <form id="addMappingForm" class="add-mapping-form">
+                <input id="newMapCode" type="text" maxlength="12" placeholder="CODE (e.g. AWS9)" required>
+                <input id="newMapUrl" type="url" placeholder="https://destination-url.com" required>
+                <button type="submit">Save</button>
+              </form>
+            </details>
+          </div>
+        </section>
+
+        <!-- 03 / LAST RESPONSE PANEL -->
+        <section class="panel result">
+          <div class="panel-head">
+            <div>
+              <label>RESULT</label>
+              <h2>Destination</h2>
+            </div>
+            <span id="badge" class="badge">WAITING</span>
+          </div>
+
+          <div id="empty" class="empty">
+            <b>↳</b>
+            <p>The resolved URL will appear here after a successful lookup.</p>
+          </div>
+
+          <div id="result" hidden>
+            <div class="result-grid">
+              <div>
+                <label>RESOLVED CODE</label>
+                <div class="result-meta-row">
+                  <h3 id="resultCode">—</h3>
+                  <span id="resultLatency" class="latency-pill">38 ms</span>
+                </div>
+              </div>
+
+              <div class="qr-box" title="URL Matrix Tag">
+                <canvas id="qrCanvas" width="63" height="63"></canvas>
+              </div>
+            </div>
+
+            <label>ORIGINAL URL</label>
+            <a id="url" href="https://docs.aws.amazon.com/" target="_blank" rel="noopener noreferrer">https://docs.aws.amazon.com/</a>
+
+            <div class="actions">
+              <button type="button" id="copy">Copy URL</button>
+              <a id="open" href="https://docs.aws.amazon.com/" target="_blank" rel="noopener noreferrer">Open ↗</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- 04 / LIVE ARCHITECTURE PIPELINE & ESP32 SERIAL MONITOR -->
+        <section class="architecture-card">
+          <div class="arch-header">
+            <strong>Request flow</strong>
+            <span style="font: 500 9px var(--mono); color: var(--teal);">GET /api/resolve/&lt;CODE&gt;</span>
+          </div>
+
+          <div class="arch-nodes">
+            <div class="arch-node" id="hopEsp32">
+              <b>01. ESP32</b>
+              GPIO / HTTP
+            </div>
+            <div class="arch-node" id="hopApiGw">
+              <b>02. API GW</b>
+              HTTPS / REST
+            </div>
+            <div class="arch-node" id="hopLambda">
+              <b>03. LAMBDA</b>
+              Resolver Fn
+            </div>
+            <div class="arch-node" id="hopDynamo">
+              <b>04. DYNAMODB</b>
+              GetItem(PK)
+            </div>
+          </div>
+
+          <div class="serial-drawer" id="serialLog" aria-live="polite"></div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="steps">
+      <div>
+        <b>01</b>
+        <span>
+          <strong>Input</strong>
+          <small>Three-button GPIO character wheel or saved-code mode</small>
+        </span>
+      </div>
+      <div>
+        <b>02</b>
+        <span>
+          <strong>Resolve</strong>
+          <small>Configured API → resolver → database (when connected)</small>
+        </span>
+      </div>
+      <div>
+        <b>03</b>
+        <span>
+          <strong>Display</strong>
+          <small>Full destination URL rendered on 128×64 OLED screen</small>
+        </span>
+      </div>
+      <div class="status">
+        <i></i>
+        <span id="status">Demo mapping active</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>LINK TERMINAL (LT•01) / IOT &amp; CLOUD COMPUTING PROJECT</span>
+    <span>ESP32 · OLED · AWS API · DynamoDB</span>
+  </footer>
+
+  <div id="toast" role="status"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>
